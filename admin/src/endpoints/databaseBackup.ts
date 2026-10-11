@@ -1,4 +1,5 @@
 import { gunzipSync, gzipSync } from 'zlib'
+import { EJSON } from 'bson'
 import type { Endpoint } from 'payload'
 
 import { checkRole } from '@/access/utilities'
@@ -15,24 +16,9 @@ export const databaseBackupDownloadEndpoint: Endpoint = {
 
     const collections: Record<string, unknown[]> = {}
     for (const { slug } of req.payload.config.collections) {
-      const documents: unknown[] = []
-      let page = 1
-      let hasNextPage = true
-
-      while (hasNextPage) {
-        const result = await req.payload.find({
-          collection: slug,
-          depth: 0,
-          limit: 500,
-          page,
-          overrideAccess: true,
-        })
-        documents.push(...result.docs)
-        hasNextPage = result.hasNextPage
-        page += 1
-      }
-
-      collections[slug] = documents
+      const collection = req.payload.db.collections[slug]?.collection
+      if (!collection) throw new Error(`Mongo collection is not available: ${slug}`)
+      collections[slug] = await collection.find({}).toArray()
     }
 
     const globals: Record<string, unknown> = {}
@@ -45,12 +31,12 @@ export const databaseBackupDownloadEndpoint: Endpoint = {
     }
 
     const payload = {
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
       collections,
       globals,
     }
-    const compressed = gzipSync(JSON.stringify(payload))
+    const compressed = gzipSync(EJSON.stringify(payload, { relaxed: false }))
     const date = new Date().toISOString().slice(0, 10)
 
     return new Response(compressed as BodyInit, {
@@ -83,7 +69,7 @@ export const databaseBackupRestoreEndpoint: Endpoint = {
 
       const input = Buffer.from(await file.arrayBuffer())
         const json = file.name.endsWith('.gz') ? gunzipSync(input).toString('utf8') : input.toString('utf8')
-        const backup = JSON.parse(json) as {
+        const backup = EJSON.parse(json) as {
           version?: number
           collections?: Record<string, unknown>
           globals?: Record<string, unknown>
@@ -91,7 +77,7 @@ export const databaseBackupRestoreEndpoint: Endpoint = {
         const configuredCollections = new Set<string>(req.payload.config.collections.map(({ slug }) => slug))
         const configuredGlobals = new Set<string>(req.payload.config.globals.map(({ slug }) => slug))
 
-        if (backup.version !== 1 || !backup.collections || typeof backup.collections !== 'object') {
+        if (backup.version !== 2 || !backup.collections || typeof backup.collections !== 'object') {
           return Response.json({ error: 'Unsupported backup format' }, { status: 400 })
         }
         for (const [slug, documents] of Object.entries(backup.collections)) {
@@ -109,18 +95,12 @@ export const databaseBackupRestoreEndpoint: Endpoint = {
         }
 
         for (const { slug } of req.payload.config.collections) {
-          await req.payload.db.deleteMany({ collection: slug, req, where: {} })
-        }
-        for (const { slug } of req.payload.config.collections) {
           const documents = backup.collections[slug]
-          if (!Array.isArray(documents)) continue
-          for (const document of documents) {
-            await req.payload.create({
-              collection: slug,
-              data: document as Record<string, unknown>,
-              depth: 0,
-              overrideAccess: true,
-            })
+          const collection = req.payload.db.collections[slug]?.collection
+          if (!collection) throw new Error(`Mongo collection is not available: ${slug}`)
+          await collection.deleteMany({})
+          if (Array.isArray(documents) && documents.length > 0) {
+            await collection.insertMany(documents as never[])
           }
         }
         for (const [slug, data] of Object.entries(backup.globals || {})) {
