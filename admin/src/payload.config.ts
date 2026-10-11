@@ -29,6 +29,7 @@ import { Skus } from '@/collections/Shop/Skus'
 import { Reviews, Questions } from '@/collections/Shop/Reviews'
 import { Stores, Faqs, Banners, ContactMessages, Subscribers } from '@/collections/Shop/Content'
 import { storefrontOrderEndpoint } from '@/endpoints/storefrontOrder'
+import { databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint } from '@/endpoints/databaseBackup'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -37,6 +38,11 @@ const dirname = path.dirname(filename)
 const storefrontURL = process.env.STOREFRONT_URL || 'http://localhost:3000'
 // Payload drops the auth cookie when the request Origin is not in `csrf`, which breaks POST /api/users/logout from the admin's own origin.
 const adminURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
+const databaseURL = process.env.DATABASE_URI || process.env.DATABASE_URL
+
+if (!databaseURL) {
+  throw new Error('Missing DATABASE_URI or DATABASE_URL. Configure a MongoDB connection string before starting the admin app.')
+}
 
 export default buildConfig({
   admin: {
@@ -66,7 +72,8 @@ export default buildConfig({
     Subscribers,
   ],
   db: mongooseAdapter({
-    url: process.env.DATABASE_URI || '',
+    allowIDOnCreate: true,
+    url: databaseURL,
   }),
   editor: lexicalEditor({
     features: () => {
@@ -164,7 +171,7 @@ export default buildConfig({
   //email: nodemailerAdapter(),
   cors: [storefrontURL],
   csrf: [storefrontURL, adminURL],
-  endpoints: [storefrontOrderEndpoint],
+  endpoints: [storefrontOrderEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
