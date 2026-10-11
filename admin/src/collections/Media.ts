@@ -34,6 +34,13 @@ export const Media: CollectionConfig = {
       required: true,
     },
     {
+      name: 'migrationSourceUrl',
+      type: 'text',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
       name: 'caption',
       type: 'richText',
       label: l('Caption', 'Chú thích'),

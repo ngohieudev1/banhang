@@ -398,6 +398,7 @@ export interface Product {
 export interface Media {
   id: string;
   alt: string;
+  migrationSourceUrl?: string | null;
   caption?: {
     root: {
       type: string;
@@ -1630,6 +1631,7 @@ export interface CategoriesSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  migrationSourceUrl?: T;
   caption?: T;
   updatedAt?: T;
   createdAt?: T;
