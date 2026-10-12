@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import { getPayload } from 'payload'
 
@@ -38,6 +39,7 @@ type DownloadedFile = {
 }
 
 const sourceBaseUrl = process.env.SOURCE_MEDIA_BASE_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'
+const sourceMediaDir = process.env.SOURCE_MEDIA_DIR
 const dryRun = process.env.DRY_RUN === 'true'
 const keepOldMedia = process.env.KEEP_OLD_MEDIA !== 'false'
 const sourceUrlCache = new Map<string, string>()
@@ -58,8 +60,29 @@ const filenameFromUrl = (url: string, fallback: string) => {
 }
 
 const download = async (url: string, fallbackName: string): Promise<DownloadedFile> => {
+  const fileName = filenameFromUrl(url, fallbackName)
+
+  if (sourceMediaDir) {
+    const localPath = path.join(sourceMediaDir, fileName)
+    try {
+      const data = await fs.readFile(localPath)
+      return {
+        data,
+        mimetype: mimeTypeFromFilename(fileName),
+        name: fileName,
+        size: data.length,
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+  }
+
   const response = await fetch(url, { redirect: 'follow' })
-  if (!response.ok) throw new Error(`Tải ảnh lỗi HTTP ${response.status}: ${url}`)
+  if (!response.ok) {
+    throw new Error(
+      `Tải ảnh lỗi HTTP ${response.status}: ${url}${sourceMediaDir ? ` (không tìm thấy file ${path.join(sourceMediaDir, fileName)})` : ''}`,
+    )
+  }
 
   const data = Buffer.from(await response.arrayBuffer())
   if (data.length === 0) throw new Error(`Ảnh rỗng: ${url}`)
@@ -68,9 +91,17 @@ const download = async (url: string, fallbackName: string): Promise<DownloadedFi
   return {
     data,
     mimetype: contentType?.startsWith('image/') ? contentType : 'image/jpeg',
-    name: filenameFromUrl(url, fallbackName),
+    name: fileName,
     size: data.length,
   }
+}
+
+const mimeTypeFromFilename = (filename: string) => {
+  const extension = path.extname(filename).toLowerCase()
+  if (extension === '.png') return 'image/png'
+  if (extension === '.webp') return 'image/webp'
+  if (extension === '.gif') return 'image/gif'
+  return 'image/jpeg'
 }
 
 const getMedia = async (payload: Awaited<ReturnType<typeof getPayload>>, value: string | MediaDocument) => {
