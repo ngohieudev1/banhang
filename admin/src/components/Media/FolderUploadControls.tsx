@@ -21,7 +21,7 @@ const readEntry = async (entry: FileSystemEntry): Promise<UploadFile[]> => {
       ;(entry as FileSystemFileEntry).file((file) => {
         const uploadedFile = file as UploadFile
         uploadedFile.webkitRelativePath = entry.fullPath.replace(/^\/+/, '')
-        resolve(uploadedFile)
+        resolve([uploadedFile])
       }, reject)
     })
   }
