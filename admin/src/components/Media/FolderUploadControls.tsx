@@ -1,10 +1,18 @@
 'use client'
 
+import JSZip from 'jszip'
 import { useRef, useState } from 'react'
 
-type UploadFile = File & { webkitRelativePath?: string }
+type UploadFile = File & {
+  uploadFilename?: string
+  webkitRelativePath?: string
+}
 
 const safeFilename = (file: UploadFile) => {
+  if (file.uploadFilename) {
+    return file.uploadFilename.replace(/[^a-zA-Z0-9._-]/g, '-')
+  }
+
   const relativePath = file.webkitRelativePath?.replaceAll('\\', '/') ?? file.name
   const parts = relativePath.split('/').filter(Boolean)
   const folder = parts.length > 1 ? parts.at(-2) : undefined
@@ -39,6 +47,61 @@ const readEntry = async (entry: FileSystemEntry): Promise<UploadFile[]> => {
   return files.flat()
 }
 
+const isZipFile = (file: File) => file.name.toLowerCase().endsWith('.zip')
+
+const getBaseName = (filename: string) => filename.replace(/\.[^.]+$/, '')
+
+const getImageMimeType = (filename: string) => {
+  const extension = filename.split('.').pop()?.toLowerCase()
+  const mimeTypes: Record<string, string> = {
+    avif: 'image/avif',
+    gif: 'image/gif',
+    jpeg: 'image/jpeg',
+    jpg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+  }
+
+  return mimeTypes[extension ?? ''] ?? 'application/octet-stream'
+}
+
+const extractZipImages = async (zipFile: UploadFile): Promise<UploadFile[]> => {
+  const zip = await JSZip.loadAsync(zipFile)
+  const zipBaseName = getBaseName(zipFile.name)
+  const images: UploadFile[] = []
+
+  for (const [path, entry] of Object.entries(zip.files)) {
+    if (entry.dir || path.startsWith('__MACOSX/')) continue
+
+    const imageName = path.split('/').filter(Boolean).at(-1)
+    if (!imageName || !/\.(avif|gif|jpe?g|png|webp)$/i.test(imageName)) continue
+
+    const imageBlob = await entry.async('blob')
+    const imageFile = new File([imageBlob], imageName, {
+      type: imageBlob.type || getImageMimeType(imageName),
+    }) as UploadFile
+
+    imageFile.uploadFilename = `${zipBaseName}-${imageName}`
+    images.push(imageFile)
+  }
+
+  return images
+}
+
+const expandZipFiles = async (files: UploadFile[]) => {
+  const expandedFiles: UploadFile[] = []
+
+  for (const file of files) {
+    if (isZipFile(file)) {
+      expandedFiles.push(...(await extractZipImages(file)))
+    } else {
+      expandedFiles.push(file)
+    }
+  }
+
+  return expandedFiles
+}
+
 const uploadFiles = async (files: UploadFile[]) => {
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue
@@ -68,11 +131,13 @@ export default function FolderUploadControls() {
     if (!files.length || isUploading) return
 
     setIsUploading(true)
-    setMessage(`Đang tải ${files.length} tệp...`)
+    setMessage('Đang đọc file ZIP...')
 
     try {
-      await uploadFiles(files)
-      setMessage(`Đã tải ${files.length} tệp.`)
+      const expandedFiles = await expandZipFiles(files)
+      setMessage(`Đang tải ${expandedFiles.length} tệp...`)
+      await uploadFiles(expandedFiles)
+      setMessage(`Đã tải ${expandedFiles.length} tệp.`)
       window.location.reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Tải folder thất bại.')
@@ -109,6 +174,7 @@ export default function FolderUploadControls() {
         onChange={(event) => handleFiles(Array.from(event.target.files ?? []) as UploadFile[])}
         type="file"
         multiple
+        accept="image/*,.zip"
         // @ts-expect-error webkitdirectory is supported by Chromium-based browsers
         webkitdirectory="true"
       />
