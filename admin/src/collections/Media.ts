@@ -74,6 +74,11 @@ export const Media: CollectionConfig = {
     beforeOperation: [renameFolderUpload],
   },
   upload: {
+    admin: {
+      components: {
+        controls: ['@/components/Media/FolderUploadControls#default'],
+      },
+    },
     staticDir: path.resolve(dirname, '../../public/media'),
   },
 }
