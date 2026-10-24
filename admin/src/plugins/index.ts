@@ -91,13 +91,28 @@ export const plugins: Plugin[] = [
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
-        admin: { ...defaultCollection.admin, group: groups.ecommerce },
+        admin: {
+          ...defaultCollection.admin,
+          group: groups.ecommerce,
+          components: {
+            ...defaultCollection.admin?.components,
+            beforeListTable: ['@/components/OrdersExport#OrdersExport'],
+          },
+        },
         fields: [
           ...defaultCollection.fields,
           {
             name: 'orderNumber',
             type: 'text',
             label: l('Order number', 'Mã đơn hàng'),
+            unique: true,
+            index: true,
+            admin: { position: 'sidebar', readOnly: true },
+          },
+          {
+            name: 'checkoutKey',
+            type: 'text',
+            label: l('Checkout key', 'Mã checkout'),
             unique: true,
             index: true,
             admin: { position: 'sidebar', readOnly: true },
@@ -113,6 +128,44 @@ export const plugins: Plugin[] = [
             type: 'number',
             label: l('Shipping fee', 'Phí vận chuyển'),
             admin: { position: 'sidebar', readOnly: true },
+          },
+          {
+            name: 'fulfillmentStatus',
+            type: 'select',
+            label: l('Fulfillment status', 'Trạng thái giao hàng'),
+            defaultValue: 'processing',
+            options: [
+              { label: l('Processing', 'Đang xử lý'), value: 'processing' },
+              { label: l('Confirmed', 'Đã xác nhận'), value: 'confirmed' },
+              { label: l('Shipping', 'Đang giao'), value: 'shipping' },
+              { label: l('Completed', 'Đã giao'), value: 'completed' },
+              { label: l('Cancelled', 'Đã hủy'), value: 'cancelled' },
+            ],
+            admin: { position: 'sidebar' },
+          },
+          {
+            name: 'carrier',
+            type: 'text',
+            label: l('Carrier', 'Đơn vị vận chuyển'),
+            admin: { position: 'sidebar' },
+          },
+          {
+            name: 'trackingNumber',
+            type: 'text',
+            label: l('Tracking number', 'Mã vận đơn'),
+            admin: { position: 'sidebar' },
+          },
+          {
+            type: 'row',
+            fields: [
+              { name: 'shippedAt', type: 'date', label: l('Shipped at', 'Ngày gửi') },
+              { name: 'deliveredAt', type: 'date', label: l('Delivered at', 'Ngày giao') },
+            ],
+          },
+          {
+            name: 'adminNote',
+            type: 'textarea',
+            label: l('Admin note', 'Ghi chú admin'),
           },
           {
             name: 'lines',

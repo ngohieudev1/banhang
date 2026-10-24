@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [checkoutKey] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     closeCart();
@@ -86,6 +87,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          checkoutKey,
           email: field("email"),
           firstName: field("first_name"),
           lastName: field("last_name"),

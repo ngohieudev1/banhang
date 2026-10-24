@@ -30,6 +30,7 @@ import { Reviews, Questions } from '@/collections/Shop/Reviews'
 import { Stores, Faqs, Banners, ContactMessages, Subscribers } from '@/collections/Shop/Content'
 import { storefrontOrderEndpoint } from '@/endpoints/storefrontOrder'
 import { databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint } from '@/endpoints/databaseBackup'
+import { ordersExportEndpoint } from '@/endpoints/ordersExport'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -171,7 +172,7 @@ export default buildConfig({
   //email: nodemailerAdapter(),
   cors: [storefrontURL],
   csrf: [storefrontURL, adminURL],
-  endpoints: [storefrontOrderEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
+  endpoints: [storefrontOrderEndpoint, ordersExportEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

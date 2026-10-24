@@ -287,8 +287,15 @@ export interface Order {
   amount?: number | null;
   currency?: 'VND' | null;
   orderNumber?: string | null;
+  checkoutKey?: string | null;
   shippingMethod?: string | null;
   shippingFee?: number | null;
+  fulfillmentStatus?: ('processing' | 'confirmed' | 'shipping' | 'completed' | 'cancelled') | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
+  adminNote?: string | null;
   lines?:
     | {
         name: string;
@@ -2121,8 +2128,15 @@ export interface OrdersSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
   orderNumber?: T;
+  checkoutKey?: T;
   shippingMethod?: T;
   shippingFee?: T;
+  fulfillmentStatus?: T;
+  carrier?: T;
+  trackingNumber?: T;
+  shippedAt?: T;
+  deliveredAt?: T;
+  adminNote?: T;
   lines?:
     | T
     | {

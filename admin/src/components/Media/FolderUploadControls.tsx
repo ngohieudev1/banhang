@@ -65,6 +65,9 @@ const getImageMimeType = (filename: string) => {
   return mimeTypes[extension ?? ''] ?? 'application/octet-stream'
 }
 
+const isImageFile = (file: UploadFile) =>
+  file.type.startsWith('image/') || getImageMimeType(file.name) !== 'application/octet-stream'
+
 const extractZipImages = async (zipFile: UploadFile): Promise<UploadFile[]> => {
   const zip = await JSZip.loadAsync(zipFile)
   const zipBaseName = getBaseName(zipFile.name)
@@ -104,10 +107,15 @@ const expandZipFiles = async (files: UploadFile[]) => {
 
 const uploadFiles = async (files: UploadFile[]) => {
   for (const file of files) {
-    if (!file.type.startsWith('image/')) continue
+    if (!isImageFile(file)) continue
 
     const body = new FormData()
-    body.append('file', new File([file], safeFilename(file), { type: file.type }))
+    body.append(
+      'file',
+      new File([file], safeFilename(file), {
+        type: file.type || getImageMimeType(file.name),
+      }),
+    )
     body.append('alt', file.name)
 
     const response = await fetch('/api/media', {
@@ -117,7 +125,15 @@ const uploadFiles = async (files: UploadFile[]) => {
     })
 
     if (!response.ok) {
-      throw new Error(`Không thể tải ${file.name} lên (${response.status})`)
+      let details = ''
+      try {
+        const payload = (await response.json()) as { errors?: Array<{ message?: string }>; message?: string }
+        details = payload.errors?.map((error) => error.message).filter(Boolean).join(', ') || payload.message || ''
+      } catch {
+        details = response.statusText
+      }
+
+      throw new Error(`Không thể tải ${file.name} lên (${response.status})${details ? `: ${details}` : ''}`)
     }
   }
 }
@@ -135,9 +151,14 @@ export default function FolderUploadControls() {
 
     try {
       const expandedFiles = await expandZipFiles(files)
-      setMessage(`Đang tải ${expandedFiles.length} tệp...`)
-      await uploadFiles(expandedFiles)
-      setMessage(`Đã tải ${expandedFiles.length} tệp.`)
+        const imageFiles = expandedFiles.filter(isImageFile)
+        if (!imageFiles.length) {
+          throw new Error('Không tìm thấy file ảnh trong folder đã chọn.')
+        }
+
+        setMessage(`Đang tải ${imageFiles.length} tệp...`)
+        await uploadFiles(imageFiles)
+        setMessage(`Đã tải ${imageFiles.length} tệp.`)
       window.location.reload()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Tải folder thất bại.')
@@ -148,6 +169,7 @@ export default function FolderUploadControls() {
 
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
+    event.stopPropagation()
     const entries = Array.from(event.dataTransfer.items)
       .map((item) => item.webkitGetAsEntry?.())
       .filter((entry): entry is FileSystemEntry => Boolean(entry))
@@ -161,7 +183,11 @@ export default function FolderUploadControls() {
 
   return (
     <div
-      onDragOver={(event) => event.preventDefault()}
+      onClick={(event) => event.stopPropagation()}
+      onDragOver={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      }}
       onDrop={handleDrop}
       style={{ border: '1px dashed var(--theme-elevation-400)', marginBlock: '1rem', padding: '1rem' }}
     >
@@ -171,7 +197,11 @@ export default function FolderUploadControls() {
       <input
         ref={inputRef}
         hidden
-        onChange={(event) => handleFiles(Array.from(event.target.files ?? []) as UploadFile[])}
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => {
+          event.stopPropagation()
+          void handleFiles(Array.from(event.target.files ?? []) as UploadFile[])
+        }}
         type="file"
         multiple
         accept="image/*,.zip"

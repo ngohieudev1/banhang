@@ -1,4 +1,6 @@
-import type { Endpoint } from 'payload'
+import { commitTransaction, initTransaction, killTransaction } from 'payload'
+import type { Endpoint, PayloadRequest } from 'payload'
+import { ObjectId } from 'mongodb'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_LINES = 50
@@ -10,6 +12,21 @@ const text = (value: unknown, max: number) =>
 const fail = (status: number, error: string) => Response.json({ ok: false, error }, { status })
 
 type RawLine = { productSlug?: unknown; skuId?: unknown; color?: unknown; quantity?: unknown }
+
+const reserveSku = async (req: PayloadRequest, id: string, quantity: number) => {
+  const collection = req.payload.db.collections.skus?.collection
+  if (!collection) throw new Error('SKU collection is unavailable')
+  const transactionID = await req.transactionID
+  const session = transactionID ? req.payload.db.sessions[transactionID] : undefined
+
+  const result = await collection.findOneAndUpdate(
+    { _id: new ObjectId(id), inventory: { $gte: quantity } },
+    { $inc: { inventory: -quantity } },
+    { returnDocument: 'after', session },
+  )
+
+  return result && typeof result === 'object' && 'value' in result ? result.value : result
+}
 
 // Public by design (guest COD checkout): prices and stock come from the database, never from the client.
 export const storefrontOrderEndpoint: Endpoint = {
@@ -24,6 +41,7 @@ export const storefrontOrderEndpoint: Endpoint = {
     const addressLine1 = text(body.address, 200)
     const city = text(body.city, 80)
     const phone = text(body.phone, 30)
+    const checkoutKey = text(body.checkoutKey, 100)
     const rawLines = Array.isArray(body.items) ? (body.items as RawLine[]) : []
     const shipping = (body.shipping ?? {}) as { method?: unknown }
 
@@ -35,9 +53,18 @@ export const storefrontOrderEndpoint: Endpoint = {
       phone.length >= 6 &&
       rawLines.length > 0 &&
       rawLines.length <= MAX_LINES
-    if (!valid) return fail(400, 'invalid')
+    if (!valid || checkoutKey.length < 16) return fail(400, 'invalid')
 
     const { payload } = req
+    const existing = await payload.find({
+      collection: 'orders',
+      where: { checkoutKey: { equals: checkoutKey } },
+      limit: 1,
+      depth: 0,
+    })
+    if (existing.docs[0]?.orderNumber) {
+      return Response.json({ ok: true, orderNumber: existing.docs[0].orderNumber })
+    }
     const items: { product: string; quantity: number }[] = []
     const lines: {
       name: string
@@ -48,8 +75,12 @@ export const storefrontOrderEndpoint: Endpoint = {
     }[] = []
     let subtotal = 0
     let hasFreeShipping = false
+    let transactionStarted = false
+    let transactionCommitted = false
 
     try {
+      transactionStarted = await initTransaction(req)
+      if (!transactionStarted) return fail(503, 'transaction_unavailable')
       const settings = await payload.findGlobal({ slug: 'site-settings', depth: 0 })
       const baseFee = settings.shippingFee ?? 30000
       if (!Number.isFinite(baseFee) || baseFee < 0) return fail(500, 'server')
@@ -66,6 +97,7 @@ export const storefrontOrderEndpoint: Endpoint = {
           where: { slug: { equals: slug }, _status: { equals: 'published' } },
           depth: 0,
           limit: 1,
+          req,
         })
         const product = found.docs[0]
         if (!product) return fail(400, 'unknown_product')
@@ -82,6 +114,7 @@ export const storefrontOrderEndpoint: Endpoint = {
             depth: 0,
             limit: skuIds.length,
             pagination: false,
+            req,
           })
           const bySku = new Map(activeSkus.docs.map((sku) => [sku.id, sku]))
           const requested = text(raw.skuId, 100)
@@ -91,7 +124,8 @@ export const storefrontOrderEndpoint: Endpoint = {
               : undefined
             : skuIds.map((id) => bySku.get(id)).find(Boolean)
           if (!sku) return fail(400, 'unknown_sku')
-          if ((sku.inventory ?? 0) < quantity) return fail(409, 'out_of_stock')
+          const reservedSku = await reserveSku(req, sku.id, quantity)
+          if (!reservedSku) return fail(409, 'out_of_stock')
           unitPrice = sku.priceInVND
           skuCode = sku.code
         } else {
@@ -119,6 +153,7 @@ export const storefrontOrderEndpoint: Endpoint = {
         const taken = await payload.count({
           collection: 'orders',
           where: { orderNumber: { equals: candidate } },
+          req,
         })
         if (taken.totalDocs === 0) orderNumber = candidate
       }
@@ -127,32 +162,52 @@ export const storefrontOrderEndpoint: Endpoint = {
       await payload.create({
         collection: 'orders',
         data: {
-          orderNumber,
-          items,
-          lines,
-          customerEmail: email,
-          shippingAddress: {
-            firstName: text(body.firstName, 80),
-            lastName,
-            addressLine1,
-            addressLine2: text(body.apartment, 200),
-            city,
-            postalCode: text(body.postalCode, 20),
-            country: text(body.country, 60),
-            phone,
-          },
-          shippingMethod: text(shipping.method, 80),
-          shippingFee,
-          amount: subtotal + shippingFee,
-          currency: 'VND',
-          status: 'processing',
+            orderNumber,
+            checkoutKey,
+            items,
+            lines,
+            customerEmail: email,
+            shippingAddress: {
+              firstName: text(body.firstName, 80),
+              lastName,
+              addressLine1,
+              addressLine2: text(body.apartment, 200),
+              city,
+              postalCode: text(body.postalCode, 20),
+              country: text(body.country, 60),
+              phone,
+            },
+            shippingMethod: text(shipping.method, 80),
+            shippingFee,
+            amount: subtotal + shippingFee,
+            currency: 'VND',
+            status: 'processing',
+            fulfillmentStatus: 'processing',
         },
+        req,
       })
+      await commitTransaction(req)
+      transactionCommitted = true
 
       return Response.json({ ok: true, orderNumber })
     } catch (error) {
+      if (transactionStarted && !transactionCommitted) {
+        await killTransaction(req)
+        transactionStarted = false
+      }
+      const existing = await payload.find({
+        collection: 'orders',
+        where: { checkoutKey: { equals: checkoutKey } },
+        limit: 1,
+        depth: 0,
+      })
+      if (existing.docs[0]?.orderNumber) {
+        return Response.json({ ok: true, orderNumber: existing.docs[0].orderNumber })
+      }
       payload.logger.error({ err: error, msg: 'storefront order failed' })
       return fail(500, 'server')
+    } finally {
+      if (transactionStarted && !transactionCommitted) await killTransaction(req)
     }
   },
 }
