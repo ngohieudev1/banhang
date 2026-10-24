@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   const country = shippingCountries.find((item) => item.id === body.country)?.label ?? str(body.country);
 
   const payload = {
+    checkoutKey: str(body.checkoutKey),
     email: str(body.email),
     firstName: str(body.firstName),
     lastName: str(body.lastName),
