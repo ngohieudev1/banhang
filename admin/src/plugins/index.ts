@@ -182,6 +182,7 @@ export const plugins: Plugin[] = [
                     throw new Error(`Invalid fulfillment transition: ${previous} -> ${next}`)
                   }
                   if (next !== previous) {
+                    siblingData.status = next === 'completed' ? 'completed' : next === 'cancelled' ? 'cancelled' : 'processing'
                     siblingData.orderEvents = [
                       ...(Array.isArray(originalDoc?.orderEvents) ? originalDoc.orderEvents : []),
                       {

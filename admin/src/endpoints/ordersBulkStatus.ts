@@ -35,7 +35,10 @@ export const ordersBulkStatusEndpoint: Endpoint = {
         await req.payload.update({
           collection: 'orders',
           id: order.id,
-          data: { fulfillmentStatus: fulfillmentStatus as any },
+          data: {
+            fulfillmentStatus: fulfillmentStatus as any,
+            status: fulfillmentStatus === 'completed' ? 'completed' : fulfillmentStatus === 'cancelled' ? 'cancelled' : 'processing',
+          },
           req,
           overrideAccess: true,
         })
