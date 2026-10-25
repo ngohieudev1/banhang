@@ -31,6 +31,7 @@ import { Stores, Faqs, Banners, ContactMessages, Subscribers } from '@/collectio
 import { storefrontOrderEndpoint } from '@/endpoints/storefrontOrder'
 import { databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint } from '@/endpoints/databaseBackup'
 import { ordersExportEndpoint } from '@/endpoints/ordersExport'
+import { ordersImportEndpoint, ordersImportTemplateEndpoint } from '@/endpoints/ordersImport'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -172,7 +173,7 @@ export default buildConfig({
   //email: nodemailerAdapter(),
   cors: [storefrontURL],
   csrf: [storefrontURL, adminURL],
-  endpoints: [storefrontOrderEndpoint, ordersExportEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
+  endpoints: [storefrontOrderEndpoint, ordersExportEndpoint, ordersImportEndpoint, ordersImportTemplateEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
