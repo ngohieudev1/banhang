@@ -32,6 +32,8 @@ import { storefrontOrderEndpoint } from '@/endpoints/storefrontOrder'
 import { databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint } from '@/endpoints/databaseBackup'
 import { ordersExportEndpoint } from '@/endpoints/ordersExport'
 import { ordersImportEndpoint, ordersImportTemplateEndpoint } from '@/endpoints/ordersImport'
+import { releaseExpiredInventoryEndpoint } from '@/endpoints/releaseExpiredInventory'
+import { ordersBulkStatusEndpoint } from '@/endpoints/ordersBulkStatus'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -173,7 +175,7 @@ export default buildConfig({
   //email: nodemailerAdapter(),
   cors: [storefrontURL],
   csrf: [storefrontURL, adminURL],
-  endpoints: [storefrontOrderEndpoint, ordersExportEndpoint, ordersImportEndpoint, ordersImportTemplateEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
+  endpoints: [storefrontOrderEndpoint, releaseExpiredInventoryEndpoint, ordersBulkStatusEndpoint, ordersExportEndpoint, ordersImportEndpoint, ordersImportTemplateEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

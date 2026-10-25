@@ -4,7 +4,8 @@ import { ObjectId } from 'mongodb'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_LINES = 50
-const MAX_QTY = 99
+const MAX_QTY = 10
+const INVENTORY_HOLD_MS = 30 * 60 * 1000
 
 const text = (value: unknown, max: number) =>
   typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -183,6 +184,8 @@ export const storefrontOrderEndpoint: Endpoint = {
             currency: 'VND',
             status: 'processing',
             fulfillmentStatus: 'processing',
+            inventoryReservedAt: new Date().toISOString(),
+            inventoryExpiresAt: new Date(Date.now() + INVENTORY_HOLD_MS).toISOString(),
         },
         req,
       })

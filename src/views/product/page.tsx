@@ -69,6 +69,7 @@ export default function ProductDetailPage({
       color: selection.color,
       sku: sku?.id,
       skuCode: sku?.code,
+      inventory: sku?.inventory,
       quantity: selection.quantity,
     });
   };

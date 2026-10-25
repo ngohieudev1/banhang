@@ -175,8 +175,9 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          disabled={item.quantity >= Math.min(10, item.inventory ?? 10)}
                           aria-label={t("cart.increase")}
-                          className="flex h-7 w-7 items-center justify-center text-foreground-800 transition-colors hover:bg-background-100 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center text-foreground-800 transition-colors hover:bg-background-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <i className="ri-add-line text-sm" />
                         </button>

@@ -288,6 +288,10 @@ export interface Order {
   currency?: 'VND' | null;
   orderNumber?: string | null;
   checkoutKey?: string | null;
+  inventoryReservedAt?: string | null;
+  inventoryExpiresAt?: string | null;
+  inventoryReleaseStartedAt?: string | null;
+  inventoryReleasedAt?: string | null;
   shippingMethod?: string | null;
   shippingFee?: number | null;
   fulfillmentStatus?: ('processing' | 'confirmed' | 'shipping' | 'completed' | 'cancelled') | null;
@@ -296,6 +300,17 @@ export interface Order {
   shippedAt?: string | null;
   deliveredAt?: string | null;
   adminNote?: string | null;
+  orderEvents?:
+    | {
+        event: string;
+        fromStatus?: string | null;
+        toStatus?: string | null;
+        note?: string | null;
+        changedBy?: string | null;
+        changedAt: string;
+        id?: string | null;
+      }[]
+    | null;
   lines?:
     | {
         name: string;
@@ -2129,6 +2144,10 @@ export interface OrdersSelect<T extends boolean = true> {
   currency?: T;
   orderNumber?: T;
   checkoutKey?: T;
+  inventoryReservedAt?: T;
+  inventoryExpiresAt?: T;
+  inventoryReleaseStartedAt?: T;
+  inventoryReleasedAt?: T;
   shippingMethod?: T;
   shippingFee?: T;
   fulfillmentStatus?: T;
@@ -2137,6 +2156,17 @@ export interface OrdersSelect<T extends boolean = true> {
   shippedAt?: T;
   deliveredAt?: T;
   adminNote?: T;
+  orderEvents?:
+    | T
+    | {
+        event?: T;
+        fromStatus?: T;
+        toStatus?: T;
+        note?: T;
+        changedBy?: T;
+        changedAt?: T;
+        id?: T;
+      };
   lines?:
     | T
     | {

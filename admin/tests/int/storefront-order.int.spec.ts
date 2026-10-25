@@ -76,6 +76,17 @@ describe('storefront order inventory boundary', () => {
     expect(collection.findOneAndUpdate).toHaveBeenCalledTimes(1)
   })
 
+  it('rejects quantities above the checkout limit before reserving inventory', async () => {
+    const { req, payload, collection } = createRequest()
+    req.json = async () => ({ ...body, items: [{ ...body.items[0], quantity: 11 }] })
+
+    const response = await run(req)
+
+    expect(response.status).toBe(400)
+    expect(payload.create).not.toHaveBeenCalled()
+    expect(collection.findOneAndUpdate).not.toHaveBeenCalled()
+  })
+
   it('returns the existing order for a repeated checkout key', async () => {
     const { req, payload, collection } = createRequest(5, 'CF123456')
 

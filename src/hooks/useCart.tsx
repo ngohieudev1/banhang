@@ -13,6 +13,7 @@ export type CartItem = {
   strap?: string;
   sku?: string;
   skuCode?: string;
+  inventory?: number;
   quantity: number;
 };
 
@@ -25,6 +26,7 @@ export type AddItemPayload = {
   strap?: string;
   sku?: string;
   skuCode?: string;
+  inventory?: number;
   quantity?: number;
 };
 
@@ -57,14 +59,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const lineId = `${payload.productId}__${payload.sku ?? payload.color}__${payload.strap ?? ""}`;
     setItems((prev) => {
       const existing = prev.find((item) => item.id === lineId);
+      const maxAvailable = Math.min(MAX_QUANTITY, payload.inventory ?? MAX_QUANTITY);
+      if (maxAvailable < 1) return prev;
       if (existing) {
         return prev.map((item) =>
           item.id === lineId
-            ? { ...item, quantity: Math.min(MAX_QUANTITY, item.quantity + quantity) }
+            ? { ...item, quantity: Math.min(maxAvailable, item.quantity + quantity) }
             : item,
         );
       }
-      return [...prev, { ...payload, id: lineId, quantity }];
+      return [...prev, { ...payload, id: lineId, quantity: Math.min(maxAvailable, quantity) }];
     });
     setIsOpen(true);
   }, []);
@@ -74,7 +78,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       prev
         .map((item) =>
           item.id === id
-            ? { ...item, quantity: Math.max(0, Math.min(MAX_QUANTITY, quantity)) }
+            ? { ...item, quantity: Math.max(0, Math.min(MAX_QUANTITY, item.inventory ?? MAX_QUANTITY, quantity)) }
             : item,
         )
         .filter((item) => item.quantity > 0),

@@ -118,6 +118,30 @@ export const plugins: Plugin[] = [
             admin: { position: 'sidebar', readOnly: true },
           },
           {
+            name: 'inventoryReservedAt',
+            type: 'date',
+            label: l('Inventory reserved at', 'Thời điểm giữ kho'),
+            admin: { position: 'sidebar', readOnly: true },
+          },
+          {
+            name: 'inventoryExpiresAt',
+            type: 'date',
+            label: l('Inventory expires at', 'Thời điểm hết hạn giữ kho'),
+            index: true,
+            admin: { position: 'sidebar', readOnly: true },
+          },
+          {
+            name: 'inventoryReleaseStartedAt',
+            type: 'date',
+            admin: { hidden: true, readOnly: true },
+          },
+          {
+            name: 'inventoryReleasedAt',
+            type: 'date',
+            label: l('Inventory released at', 'Thời điểm trả kho'),
+            admin: { position: 'sidebar', readOnly: true },
+          },
+          {
             name: 'shippingMethod',
             type: 'text',
             label: l('Shipping method', 'Hình thức giao hàng'),
@@ -142,6 +166,38 @@ export const plugins: Plugin[] = [
               { label: l('Cancelled', 'Đã hủy'), value: 'cancelled' },
             ],
             admin: { position: 'sidebar' },
+            hooks: {
+              beforeChange: [
+                ({ value, originalDoc, siblingData, req }) => {
+                  const next = value || 'processing'
+                  const previous = originalDoc?.fulfillmentStatus || 'processing'
+                  const allowed: Record<string, string[]> = {
+                    processing: ['confirmed', 'cancelled'],
+                    confirmed: ['shipping', 'cancelled'],
+                    shipping: ['completed', 'cancelled'],
+                    completed: [],
+                    cancelled: [],
+                  }
+                  if (originalDoc && next !== previous && !allowed[previous]?.includes(next)) {
+                    throw new Error(`Invalid fulfillment transition: ${previous} -> ${next}`)
+                  }
+                  if (next !== previous) {
+                    siblingData.orderEvents = [
+                      ...(Array.isArray(originalDoc?.orderEvents) ? originalDoc.orderEvents : []),
+                      {
+                        event: 'status_changed',
+                        fromStatus: previous,
+                        toStatus: next,
+                        note: '',
+                        changedBy: req.user && typeof req.user === 'object' ? String(req.user.id) : 'system',
+                        changedAt: new Date().toISOString(),
+                      },
+                    ]
+                  }
+                  return next
+                },
+              ],
+            },
           },
           {
             name: 'carrier',
@@ -166,6 +222,20 @@ export const plugins: Plugin[] = [
             name: 'adminNote',
             type: 'textarea',
             label: l('Admin note', 'Ghi chú admin'),
+          },
+          {
+            name: 'orderEvents',
+            type: 'array',
+            label: l('Order history', 'Lịch sử đơn hàng'),
+            admin: { readOnly: true },
+            fields: [
+              { name: 'event', type: 'text', required: true },
+              { name: 'fromStatus', type: 'text' },
+              { name: 'toStatus', type: 'text' },
+              { name: 'note', type: 'text' },
+              { name: 'changedBy', type: 'text' },
+              { name: 'changedAt', type: 'date', required: true },
+            ],
           },
           {
             name: 'lines',

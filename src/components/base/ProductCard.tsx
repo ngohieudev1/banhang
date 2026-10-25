@@ -32,6 +32,7 @@ export default function ProductCard({ product, index = 0, onQuickAdd }: ProductC
       price: product.price,
       image: product.image,
       color: product.colors[0]?.name ?? t("card.defaultColor"),
+      inventory: product.skus?.[0]?.inventory,
     });
     onQuickAdd?.(product);
     window.setTimeout(() => setAdded(false), 1600);

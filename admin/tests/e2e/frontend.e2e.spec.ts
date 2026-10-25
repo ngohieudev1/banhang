@@ -342,6 +342,26 @@ test.describe('Frontend', () => {
     await expect(status).toBeVisible()
   })
 
+  test('shows the order lifecycle history after status transitions', async ({ page }) => {
+    await loginFromUI(page, adminEmail, adminPassword)
+    await addToCartAndConfirm(page, { productName: 'Test Product', productSlug: 'test-product' })
+    await checkout(page, testPaymentDetails)
+    const orderHeader = await page.locator('h1.text-sm.uppercase.font-mono > span').textContent()
+    const orderId = orderHeader?.replace(/^Order #/, '').trim()
+    expect(orderId).toBeTruthy()
+
+    for (const fulfillmentStatus of ['confirmed', 'shipping', 'completed']) {
+      const response = await page.request.patch(`${baseURL}/api/orders/${orderId}`, {
+        data: { fulfillmentStatus },
+      })
+      expect(response.ok()).toBeTruthy()
+    }
+
+    await page.reload()
+    await expect(page.getByText('Order history')).toBeVisible()
+    await expect(page.getByText('completed')).toBeVisible()
+  })
+
   test('should disable add to cart when product has no inventory', async ({ page }) => {
     await page.goto(`${baseURL}/products/no-inventory-product`)
     const addToCartButton = page.getByRole('button', { name: 'Add to Cart' })

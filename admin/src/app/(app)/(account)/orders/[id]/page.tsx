@@ -80,6 +80,8 @@ export default async function Order({ params, searchParams }: PageProps) {
         customerEmail: true,
         customer: true,
         status: true,
+        fulfillmentStatus: true,
+        orderEvents: true,
         createdAt: true,
         updatedAt: true,
         shippingAddress: true,
@@ -156,6 +158,20 @@ export default async function Order({ params, searchParams }: PageProps) {
             </div>
           )}
         </div>
+
+        {order.orderEvents && order.orderEvents.length > 0 && (
+          <div>
+            <h2 className="font-mono text-primary/50 mb-4 uppercase text-sm">Order history</h2>
+            <ol className="flex flex-col gap-3 border-l pl-4">
+              {order.orderEvents.map((event, index) => (
+                <li key={`${event.changedAt}-${index}`} className="text-sm">
+                  <p className="font-medium">{event.toStatus || event.event}</p>
+                  <p className="text-primary/50">{event.changedAt ? formatDateTime({ date: event.changedAt, format: 'MMMM dd, yyyy HH:mm' }) : ''}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {order.items && (
           <div>
