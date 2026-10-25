@@ -97,4 +97,21 @@ describe('storefront order inventory boundary', () => {
     expect(payload.create).not.toHaveBeenCalled()
     expect(collection.findOneAndUpdate).not.toHaveBeenCalled()
   })
+
+  it('allows only one concurrent checkout to reserve the last unit', async () => {
+    let remaining = 2
+    const make = createRequest(2)
+    make.collection.findOneAndUpdate.mockImplementation(async () => {
+      if (remaining < 2) return { value: null }
+      remaining -= 2
+      return { value: { id: skuId, inventory: remaining, priceInVND: 100000, active: true } }
+    })
+
+    const second = createRequest(2)
+    second.collection.findOneAndUpdate = make.collection.findOneAndUpdate
+
+    const responses = await Promise.all([run(make.req), run(second.req)])
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
+    expect(remaining).toBe(0)
+  })
 })
