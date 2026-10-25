@@ -30,7 +30,8 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+      // Use the installed Windows Chrome binary; the bundled Chromium process can fail with spawn UNKNOWN.
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
   webServer: {

@@ -11,3 +11,4 @@ next-env.d.ts
 .local-mongo-rs/
 /AGENTS.md
 admin/node_modules.incomplete/
+admin/test-results/

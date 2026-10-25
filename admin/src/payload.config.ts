@@ -32,6 +32,7 @@ import { storefrontOrderEndpoint } from '@/endpoints/storefrontOrder'
 import { databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint } from '@/endpoints/databaseBackup'
 import { ordersExportEndpoint } from '@/endpoints/ordersExport'
 import { ordersImportEndpoint, ordersImportTemplateEndpoint } from '@/endpoints/ordersImport'
+import { categoriesImportEndpoint, categoriesImportTemplateEndpoint, couponsImportEndpoint, couponsImportTemplateEndpoint, productsImportEndpoint, productsImportTemplateEndpoint, skusImportEndpoint, skusImportTemplateEndpoint } from '@/endpoints/catalogImport'
 import { releaseExpiredInventoryEndpoint } from '@/endpoints/releaseExpiredInventory'
 import { ordersBulkStatusEndpoint } from '@/endpoints/ordersBulkStatus'
 import { plugins } from './plugins'
@@ -175,7 +176,7 @@ export default buildConfig({
   //email: nodemailerAdapter(),
   cors: [storefrontURL],
   csrf: [storefrontURL, adminURL],
-  endpoints: [storefrontOrderEndpoint, releaseExpiredInventoryEndpoint, ordersBulkStatusEndpoint, ordersExportEndpoint, ordersImportEndpoint, ordersImportTemplateEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
+  endpoints: [storefrontOrderEndpoint, releaseExpiredInventoryEndpoint, ordersBulkStatusEndpoint, ordersExportEndpoint, ordersImportEndpoint, ordersImportTemplateEndpoint, productsImportEndpoint, productsImportTemplateEndpoint, skusImportEndpoint, skusImportTemplateEndpoint, categoriesImportEndpoint, categoriesImportTemplateEndpoint, couponsImportEndpoint, couponsImportTemplateEndpoint, databaseBackupDownloadEndpoint, databaseBackupRestoreEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

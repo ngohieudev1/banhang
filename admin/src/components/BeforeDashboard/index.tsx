@@ -4,6 +4,7 @@ import React from 'react'
 
 import { DatabaseBackup } from './DatabaseBackup'
 import { SeedButton } from './SeedButton'
+import { CatalogImport } from '../CatalogImport'
 import './index.scss'
 
 const baseClass = 'before-dashboard'
@@ -17,6 +18,7 @@ export const BeforeDashboard: React.FC<{ i18n?: I18n }> = ({ i18n }) => {
         <h4>{t('dashboardWelcome')}</h4>
       </Banner>
       <DatabaseBackup isVietnamese={i18n?.language === 'vi'} />
+      <CatalogImport />
       {t('nextSteps')}
       <ul className={`${baseClass}__instructions`}>
         <li>
