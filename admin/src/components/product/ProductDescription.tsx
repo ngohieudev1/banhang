@@ -11,7 +11,7 @@ import { StockIndicator } from '@/components/product/StockIndicator'
 
 export function ProductDescription({ product }: { product: Product }) {
   const { currency } = useCurrency()
-  let amount = product.compareAtPrice ?? 0
+  let amount = product.priceInVND ?? product.compareAtPrice ?? 0
   let lowestAmount = 0
   let highestAmount = 0
 

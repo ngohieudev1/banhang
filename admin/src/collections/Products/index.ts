@@ -45,6 +45,8 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
   },
   fields: [
     { name: 'title', type: 'text', required: true, label: l('Title', 'Tên sản phẩm') },
+    { name: 'priceInVNDEnabled', type: 'checkbox', defaultValue: true, label: l('VND pricing enabled', 'Bật giá VNĐ') },
+    { name: 'priceInVND', type: 'number', min: 0, label: l('Price (VND)', 'Giá (VNĐ)') },
     {
       type: 'tabs',
       tabs: [

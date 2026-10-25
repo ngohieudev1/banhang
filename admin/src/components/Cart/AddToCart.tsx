@@ -32,19 +32,23 @@ export function AddToCart({ product }: Props) {
 
       addItem({
         product: product.id,
+        ...(selectedSku ? { variant: selectedSku.id } : {}),
       }).then(() => {
         toast.success('Item added to cart.')
       })
     },
-    [addItem, product],
+    [addItem, product, selectedSku],
   )
 
   const disabled = useMemo<boolean>(() => {
     if (skus.length > 0 && selectedSku) {
       return (selectedSku.inventory ?? 0) <= 0
     }
-    return (product.compareAtPrice ?? 0) <= 0
-  }, [selectedSku, skus, product.compareAtPrice])
+    return (
+      (product.priceInVND ?? product.compareAtPrice ?? 0) <= 0 ||
+      (typeof product.inventory === 'number' && product.inventory <= 0)
+    )
+  }, [selectedSku, skus, product.priceInVND, product.compareAtPrice, product.inventory])
 
   return (
     <Button

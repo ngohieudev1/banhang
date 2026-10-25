@@ -332,6 +332,8 @@ export interface Order {
 export interface Product {
   id: string;
   title: string;
+  priceInVNDEnabled?: boolean | null;
+  priceInVND?: number | null;
   gallery?:
     | {
         image: string | Media;
@@ -2025,6 +2027,8 @@ export interface VariantOptionsSelect<T extends boolean = true> {
  */
 export interface ProductsSelect<T extends boolean = true> {
   title?: T;
+  priceInVNDEnabled?: T;
+  priceInVND?: T;
   gallery?:
     | T
     | {

@@ -56,7 +56,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const { data, errors } = await res.json()
         if (errors) throw new Error(errors[0].message)
-        setUser(data?.loginUser?.user)
+        // Read the session-backed user after signup so dependent providers do not
+        // fetch protected resources before Payload has issued the auth cookie.
+        const meResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users/me`, {
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        const me = meResponse.ok ? (await meResponse.json()).user : data?.loginUser?.user
+        setUser(me?.id ? me : null)
         setStatus('loggedIn')
       } else {
         throw new Error('Invalid login')
@@ -83,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const { errors, user } = await res.json()
         if (errors) throw new Error(errors[0].message)
-        setUser(user)
+        setUser(user?.id ? user : null)
         setStatus('loggedIn')
         return user
       }
@@ -95,6 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const logout = useCallback<Logout>(async () => {
+    // Clear dependent provider state before the session cookie is removed.
+    setUser(null)
+    setStatus('loggedOut')
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users/logout`, {
         credentials: 'include',
@@ -105,8 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
 
       if (res.ok) {
-        setUser(null)
-        setStatus('loggedOut')
+        return
       } else {
         throw new Error('An error occurred while attempting to logout.')
       }

@@ -24,7 +24,7 @@ export const StockIndicator: React.FC<Props> = ({ product }) => {
     if (selectedSku) {
       return selectedSku.inventory || 0
     }
-    return 0
+    return product.inventory ?? 0
   }, [selectedSku])
 
   if (skus.length > 0 && !selectedSku) {

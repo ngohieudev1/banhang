@@ -284,10 +284,18 @@ export const plugins: Plugin[] = [
     addresses: {
       addressesCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
+        access: {
+          ...defaultCollection.access,
+          read: ({ req }) => {
+            if (req.user && isAdmin({ req })) return true
+            return req.user?.id ? { customer: { equals: req.user.id } } : false
+          },
+        },
         admin: { ...defaultCollection.admin, group: groups.ecommerce },
       }),
     },
     carts: {
+      allowGuestCarts: true,
       cartsCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
         admin: { ...defaultCollection.admin, group: groups.ecommerce },

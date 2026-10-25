@@ -13,7 +13,7 @@ type Props = {
 export const ProductGridItem: React.FC<Props> = ({ product }) => {
   const { gallery, title } = product
 
-  let price = product.compareAtPrice ?? 0
+  let price = product.priceInVND ?? product.compareAtPrice ?? 0
 
   const skus = product.skus?.filter((sku) => typeof sku === 'object') ?? []
 
